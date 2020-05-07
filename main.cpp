@@ -1,3 +1,5 @@
+// Downloaded from https://developer.x-plane.com/code-sample/hello-world-sdk-3/
+
 #include "XPLMDisplay.h"
 #include "XPLMGraphics.h"
 #include <string.h>
@@ -7,11 +9,12 @@
 #if LIN
 	#include <GL/gl.h>
 #elif __GNUC__
-	//#include <OpenGL/gl.h>
-#else
 	#include <GL/gl.h>
 #endif
 
+#ifndef XPLM300
+	#error This is made to be compiled against the XPLM300 SDK
+#endif
 
 // An opaque handle to the window we will create
 static XPLMWindowID	g_window;
@@ -102,3 +105,4 @@ void	draw_hello_world(XPLMWindowID in_window_id, void * in_refcon)
 	
 	XPLMDrawString(col_white, l + 10, t - 20, "Hello world!", NULL, xplmFont_Proportional);
 }
+
