@@ -1,1 +1,5 @@
+# Vim files
 *.swp
+
+# Windows shortcuts
+*.lnk

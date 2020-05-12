@@ -10,7 +10,7 @@ MKDIR bin
 REM GCC compile & assemble
 gcc ^
 main.cpp ^
--o bin/win.o ^
+-o bin/main.o ^
 -m64 ^
 -c ^
 -DIBM ^
@@ -22,9 +22,10 @@ main.cpp ^
 -Iinc/SDK/XPLM ^
 -Iinc/SDK/Widgets 
 
+
 REM GCC link
 gcc ^
-bin/win.o ^
+bin/main.o ^
 -o bin/win.xpl ^
 -shared ^
 -Llib/SDK/Win ^

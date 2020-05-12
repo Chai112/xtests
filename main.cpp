@@ -1,116 +1,130 @@
-#include "XPLMDisplay.h"
-#include "XPLMGraphics.h"
-#include "XPLMDefs.h"
-#include "XPLMUtilities.h"
-#include "XPLMDataAccess.h"
+
+#include <stdio.h>
 #include <string.h>
 
-/* This example plugin demonstrates how to use a 2-d drawing callback to draw
- * to the screen in a way that matches the 3-d coordinate system.  Add-ons that
- * need to add 3-d labels, coach marks, or other non-3d graphics that "match"
- * the real world can use this technique to draw on with Metal and Vulkan. */
+#include <XPLMGraphics.h>
+#include <XPLMDisplay.h>
 
-// Datarefs for the aircraft position.
-static XPLMDataRef	s_pos_x = NULL; 
-static XPLMDataRef	s_pos_y = NULL; 
-static XPLMDataRef	s_pos_z = NULL; 
+#include <GL/gl.h>
 
-// Transform matrices - we will use these to figure out where we shuold should have drawn.
-static XPLMDataRef	s_matrix_wrl = NULL;
-static XPLMDataRef	s_matrix_proj = NULL;
-static XPLMDataRef	s_screen_width = NULL;
-static XPLMDataRef	s_screen_height = NULL;
+// Our texture dimensions.  Textures MUST be powers of 2 in OpenGL - if you don't need that much space,
+// just round up to the nearest power of 2.
+#define WIDTH 128
+#define HEIGHT 128
 
-// 4x4 matrix transform of an XYZW coordinate - this matches OpenGL matrix conventions.
-static void mult_matrix_vec(float dst[4], const float m[16], const float v[4])
+// This is our texture ID.  Texture IDs in OpenGL are just ints...but this is a global for the life of our plugin.
+static int                g_tex_num = 0;
+
+// We use this memory to prep the buffer.  Note that this memory DOES NOT have to be global - the memory is FULLY
+// read by OpenGL before glTexSubImage2D or glTexImage2D return, so you could use local or temporary storage, or
+// change the image AS SOON as the call returns!  4 bytes for R,G,B,A 32-bit pixels.
+static unsigned char    buffer[WIDTH*HEIGHT*4];
+
+static int my_draw_tex(
+                                   XPLMDrawingPhase     inPhase,
+                                   int                  inIsBefore,
+                                   void *               inRefcon)
 {
-	dst[0] = v[0] * m[0] + v[1] * m[4] + v[2] * m[8] + v[3] * m[12];
-	dst[1] = v[0] * m[1] + v[1] * m[5] + v[2] * m[9] + v[3] * m[13];
-	dst[2] = v[0] * m[2] + v[1] * m[6] + v[2] * m[10] + v[3] * m[14];
-	dst[3] = v[0] * m[3] + v[1] * m[7] + v[2] * m[11] + v[3] * m[15];
+   // A really dumb bitmap generator - just fill R and G with x and Y based color watch, and the B and alpha channels
+   // based on mouse position.
+   int mx, my, sx, sy;
+   XPLMGetMouseLocation(&mx, &my);
+   XPLMGetScreenSize(&sx,&sy);
+   unsigned char * c = buffer;
+   for(int y = 0; y < HEIGHT; ++y)
+   for(int x = 0; x < WIDTH; ++x)
+   {
+      *c++ = x * 255 / WIDTH;
+      *c++ = y * 255 / HEIGHT;
+      *c++ = mx * 255 / sx;
+      *c++ = my * 255 / sy;
+   }
+   XPLMBindTexture2d(g_tex_num,0);
+   // Note: if the tex size is not changing, glTexSubImage2D is faster than glTexImage2D.
+   glTexSubImage2D(GL_TEXTURE_2D,
+                  0,                       // mipmap level
+                  0,                       // x-offset
+                  0,                       // y-offset
+                  WIDTH,
+                  HEIGHT,
+                  GL_RGBA,                 // color of data we are seding
+                  GL_UNSIGNED_BYTE,        // encoding of data we are sending
+                  buffer);
+
+   // The drawing part.
+   XPLMSetGraphicsState(
+      0,        // No fog, equivalent to glDisable(GL_FOG);
+      1,        // One texture, equivalent to glEnable(GL_TEXTURE_2D);
+      0,        // No lighting, equivalent to glDisable(GL_LIGHT0);
+      0,        // No alpha testing, e.g glDisable(GL_ALPHA_TEST);
+      1,        // Use alpha blending, e.g. glEnable(GL_BLEND);
+      0,        // No depth read, e.g. glDisable(GL_DEPTH_TEST);
+      0);        // No depth write, e.g. glDepthMask(GL_FALSE);
+
+   glColor3f(1,1,1);        // Set color to white.
+   glLineWidth(5);
+   int buffer[] = {
+       1, 2, 1
+   };
+   for (int i = 0; i < 100000; i++)
+   {
+       glBegin(GL_LINES);
+       glVertex2f(buffer[0],buffer[0]);        // We draw one textured quad.  Note: the first numbers 0,1 are texture coordinates, which are ratios.
+       glVertex2f(buffer[i % 2],buffer[i % 2]);        // lower left is 0,0, upper right is 1,1.  So if we wanted to use the lower half of the texture, we
+       glEnd();
+   }
+   glLineWidth(1);
 }
 
-// This drawing callback will draw a label to the screen where the 
-
-static int DrawCallback1(XPLMDrawingPhase inPhase, int inIsBefore, void * inRefcon)
+PLUGIN_API int XPluginStart(char * name, char * sig, char * desc)
 {
-	// Read the ACF's OpengL coordinates
-	float acf_wrl[4] = {	
-		XPLMGetDataf(s_pos_x),
-		XPLMGetDataf(s_pos_y),
-		XPLMGetDataf(s_pos_z),
-		1.0f };
-		
-	float mv[16], proj[16];
-	
-	// Read the model view and projection matrices from this frame
-	XPLMGetDatavf(s_matrix_wrl,mv,0,16);
-	XPLMGetDatavf(s_matrix_proj,proj,0,16);
-	
-	float acf_eye[4], acf_ndc[4];
-	
-	// Simulate the OpenGL transformation to get screen coordinates.
-	mult_matrix_vec(acf_eye, mv, acf_wrl);
-	mult_matrix_vec(acf_ndc, proj, acf_eye);
-	
-	acf_ndc[3] = 1.0f / acf_ndc[3];
-	acf_ndc[0] *= acf_ndc[3];
-	acf_ndc[1] *= acf_ndc[3];
-	acf_ndc[2] *= acf_ndc[3];
-	
-	float screen_w = XPLMGetDatai(s_screen_width);
-	float screen_h = XPLMGetDatai(s_screen_height);
-	
-	float final_x = screen_w * (acf_ndc[0] * 0.5f + 0.5f);
-	float final_y = screen_h * (acf_ndc[1] * 0.5f + 0.5f);
+   strcpy(name,"Texture example");
+   strcpy(sig,"xpsdk.test.texture_example");
+   strcpy(desc,"Shows how to use textures.");
 
-	// Now we have something in screen coordinates, which we can then draw a label on.
+   // Initialization: allocate a textiure number.
+   XPLMGenerateTextureNumbers(&g_tex_num, 1);
+   XPLMBindTexture2d(g_tex_num,0);
+   // Init to black for now.
+   memset(buffer,0,WIDTH*HEIGHT*4);
+   // The first time we must use glTexImage2D.
+   glTexImage2D(
+           GL_TEXTURE_2D,
+           0,                   // mipmap level
+           GL_RGBA,             // internal format for the GL to use.  (We could ask for a floating point tex or 16-bit tex if we were crazy!)
+           WIDTH,
+           HEIGHT,
+           0,                   // border size
+           GL_RGBA,             // format of color we are giving to GL
+           GL_UNSIGNED_BYTE,    // encoding of our data
+           buffer);
 
-	XPLMDrawTranslucentDarkBox(final_x - 5, final_y + 10, final_x + 100, final_y - 10);
+   // Note: we must set the filtering params to SOMETHING or OpenGL won't draw anything!
+   glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST);
+   glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST);
 
-	float colWHT[] = { 1.0, 1.0, 1.0 };
-	XPLMDrawString(colWHT, final_x, final_y, "TEST STRING 1", NULL, xplmFont_Basic);		
-	
-	return 1;
+   XPLMRegisterDrawCallback(my_draw_tex, xplm_Phase_Gauges, 0, NULL);
+   return 1;
 }
 
-PLUGIN_API int XPluginStart(char * outName, char * outSig, char * outDesc)
+PLUGIN_API void XPluginStop(void)
 {
-	strcpy(outName,"Example label drawing");
-	strcpy(outSig,"com.laminar.example_label_drawing");
-	strcpy(outDesc,"A plugin that shows how to draw a 3-d-referenced label in 2-d");
-	
-	XPLMRegisterDrawCallback(DrawCallback1, xplm_Phase_Window, 0, NULL);
-	
-	s_pos_x = XPLMFindDataRef("sim/flightmodel/position/local_x");
-	s_pos_y = XPLMFindDataRef("sim/flightmodel/position/local_y");
-	s_pos_z = XPLMFindDataRef("sim/flightmodel/position/local_z");
-
-	// These datarefs are valid to read from a 2-d drawing callback and describe the state
-	// of the underlying 3-d drawing environment the 2-d drawing is layered on top of.
-	s_matrix_wrl = XPLMFindDataRef("sim/graphics/view/world_matrix");
-	s_matrix_proj = XPLMFindDataRef("sim/graphics/view/projection_matrix_3d");
-
-	// This describes the size of the current monitor at the time we draw.
-	s_screen_width = XPLMFindDataRef("sim/graphics/view/window_width");
-	s_screen_height = XPLMFindDataRef("sim/graphics/view/window_height");
-	
-	return 1;
+    //XPLMUnregisterDrawCallback(my_draw_tex,xplm_Phase_Gauges, 0, NULL);
+    XPLMUnregisterDrawCallback(my_draw_tex,xplm_Phase_Gauges, 0, NULL);
+    XPLMBindTexture2d(g_tex_num,0);
+    GLuint t=g_tex_num;
+    glDeleteTextures(1,&t);
 }
 
-PLUGIN_API int XPluginEnable()
+PLUGIN_API int XPluginEnable(void)
 {
-	return 1;
+    return 1;
 }
 
-PLUGIN_API void XPluginStop()
+PLUGIN_API void XPluginDisable(void)
 {
 }
 
-PLUGIN_API void XPluginDisable()
-{
-}
-
-PLUGIN_API void XPluginReceiveMessage(XPLMPluginID inFrom, int inMessage, void * inParam )
+PLUGIN_API void XPluginReceiveMessage(XPLMPluginID from, long msg, void * p)
 {
 }
