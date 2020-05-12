@@ -9,8 +9,9 @@
 
 // Our texture dimensions.  Textures MUST be powers of 2 in OpenGL - if you don't need that much space,
 // just round up to the nearest power of 2.
-#define WIDTH 128
-#define HEIGHT 128
+#define WIDTH 2280
+#define HEIGHT 2280
+
 
 // This is our texture ID.  Texture IDs in OpenGL are just ints...but this is a global for the life of our plugin.
 static int                g_tex_num = 0;
@@ -19,6 +20,7 @@ static int                g_tex_num = 0;
 // read by OpenGL before glTexSubImage2D or glTexImage2D return, so you could use local or temporary storage, or
 // change the image AS SOON as the call returns!  4 bytes for R,G,B,A 32-bit pixels.
 static unsigned char    buffer[WIDTH*HEIGHT*4];
+   static unsigned char * c = buffer;
 
 static int my_draw_tex(
                                    XPLMDrawingPhase     inPhase,
@@ -30,27 +32,6 @@ static int my_draw_tex(
    int mx, my, sx, sy;
    XPLMGetMouseLocation(&mx, &my);
    XPLMGetScreenSize(&sx,&sy);
-   unsigned char * c = buffer;
-   for(int y = 0; y < HEIGHT; ++y)
-   for(int x = 0; x < WIDTH; ++x)
-   {
-      *c++ = x * 255 / WIDTH;
-      *c++ = y * 255 / HEIGHT;
-      *c++ = mx * 255 / sx;
-      *c++ = my * 255 / sy;
-   }
-   XPLMBindTexture2d(g_tex_num,0);
-   // Note: if the tex size is not changing, glTexSubImage2D is faster than glTexImage2D.
-   glTexSubImage2D(GL_TEXTURE_2D,
-                  0,                       // mipmap level
-                  0,                       // x-offset
-                  0,                       // y-offset
-                  WIDTH,
-                  HEIGHT,
-                  GL_RGBA,                 // color of data we are seding
-                  GL_UNSIGNED_BYTE,        // encoding of data we are sending
-                  buffer);
-
    // The drawing part.
    XPLMSetGraphicsState(
       0,        // No fog, equivalent to glDisable(GL_FOG);
@@ -62,18 +43,27 @@ static int my_draw_tex(
       0);        // No depth write, e.g. glDepthMask(GL_FALSE);
 
    glColor3f(1,1,1);        // Set color to white.
-   glLineWidth(5);
-   int buffer[] = {
-       1, 2, 1
-   };
-   for (int i = 0; i < 100000; i++)
-   {
-       glBegin(GL_LINES);
-       glVertex2f(buffer[0],buffer[0]);        // We draw one textured quad.  Note: the first numbers 0,1 are texture coordinates, which are ratios.
-       glVertex2f(buffer[i % 2],buffer[i % 2]);        // lower left is 0,0, upper right is 1,1.  So if we wanted to use the lower half of the texture, we
-       glEnd();
-   }
-   glLineWidth(1);
+   int x1 = 20;
+   int y1 = 20;
+   int x2 = x1 + WIDTH;
+   int y2 = y1 + HEIGHT;
+   XPLMBindTexture2d(g_tex_num,0);
+   // Note: if the tex size is not changing, glTexSubImage2D is faster than glTexImage2D.
+   glTexSubImage2D(GL_TEXTURE_2D,
+                  0,                       // mipmap level
+                  0,                       // x-offset
+                  0,                       // y-offset
+                  WIDTH,
+                  HEIGHT,
+                  GL_RGBA,                 // color of data we are seding
+                  GL_UNSIGNED_BYTE,        // encoding of data we are sending
+                  buffer);
+   glBegin(GL_QUADS);
+   glTexCoord2f(0,0);        glVertex2f(x1,y1);        // We draw one textured quad.  Note: the first numbers 0,1 are texture coordinates, which are ratios.
+   glTexCoord2f(0,1);        glVertex2f(x1,y2);        // lower left is 0,0, upper right is 1,1.  So if we wanted to use the lower half of the texture, we
+   glTexCoord2f(1,1);        glVertex2f(x2,y2);        // would use 0,0 to 0,0.5 to 1,0.5, to 1,0.  Note that for X-Plane front facing polygons are clockwise
+   glTexCoord2f(1,0);        glVertex2f(x2,y1);        // unless you change it; if you change it, change it back!
+   glEnd();
 }
 
 PLUGIN_API int XPluginStart(char * name, char * sig, char * desc)
@@ -102,6 +92,17 @@ PLUGIN_API int XPluginStart(char * name, char * sig, char * desc)
    // Note: we must set the filtering params to SOMETHING or OpenGL won't draw anything!
    glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST);
    glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST);
+
+   
+   for(int y = 0; y < HEIGHT; ++y)
+   for(int x = 0; x < WIDTH; ++x)
+   {
+      *c++ = 1; // r
+      *c++ = 1; // g
+      *c++ = 1; // b
+      *c++ = 1;
+   }
+
 
    XPLMRegisterDrawCallback(my_draw_tex, xplm_Phase_Gauges, 0, NULL);
    return 1;
