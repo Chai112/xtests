@@ -33,5 +33,11 @@ bin/main.o ^
 -lXPLM_64 ^
 -lXPWidgets_64
 
+ECHO Installing...
+
+COPY bin\win.xpl "D:\Documents\programs\X-Plane 11\Aircraft\Chai112\b777-300er\plugins"
+COPY bin\win.xpl "D:\Documents\programs\X-Plane 11\Aircraft\Chai112\xtest1\plugins"
+COPY bin\win.xpl "D:\Documents\programs\X-Plane 11\Aircraft\Chai112\xtest2\plugins"
+
 ECHO Finished.
 PAUSE
