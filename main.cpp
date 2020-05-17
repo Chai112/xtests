@@ -22,8 +22,16 @@ static int                g_tex_num = 0;
 // change the image AS SOON as the call returns!  4 bytes for R,G,B,A 32-bit pixels.
 static unsigned char    buffer[WIDTH*HEIGHT*4];
    static unsigned char * c = buffer;
-   static char circlex[20];
-   static char circley[20];
+   static float circlex[20];
+   static float circley[20];
+
+static float charA[] = {
+    0,      0,
+    .5,     1,
+    1,      0,
+    .83,    .33,
+    .17,    .33,
+};
 
 static int my_draw_tex(
                                    XPLMDrawingPhase     inPhase,
@@ -38,7 +46,7 @@ static int my_draw_tex(
    // The drawing part.
    XPLMSetGraphicsState(
       0,        // No fog, equivalent to glDisable(GL_FOG);
-      1,        // One texture, equivalent to glEnable(GL_TEXTURE_2D);
+      0,        // One texture, equivalent to glEnable(GL_TEXTURE_2D);
       0,        // No lighting, equivalent to glDisable(GL_LIGHT0);
       0,        // No alpha testing, e.g glDisable(GL_ALPHA_TEST);
       1,        // Use alpha blending, e.g. glEnable(GL_BLEND);
@@ -47,16 +55,13 @@ static int my_draw_tex(
 
    glColor3f(1,1,1);        // Set color to white.
    
-   for (int i = 0; i < 10000; i++)
-   {
-   int cx = 1000;
-   int cy = 1000;
-   int r = 10;
    int num_segments = 20;
+   for (int i = 0; i < 1000; i++)
+   {
    glBegin(GL_LINE_LOOP);
     for(int ii = 0; ii < num_segments; ii++)
     {
-        glVertex2f(circlex[ii] + cx, circley[ii] + cy);//output vertex
+        glVertex2f(1000 + circlex[ii], 1000 + circley[ii] );//output vertex
 
     }
     glEnd();
@@ -92,21 +97,26 @@ PLUGIN_API int XPluginStart(char * name, char * sig, char * desc)
 
    int cx = 1000;
    int cy = 1000;
-   int r = 10;
    int num_segments = 20;
    int i = 0;
     for(int ii = 0; ii < num_segments; ii++)
     {
         float theta = 2.0f * 3.1415926f * float(ii) / float(num_segments);//get the current angle
 
-        float x = r * cosf(theta);//calculate the x component
-        float y = r * sinf(theta);//calculate the y component
+        float x = cosf(theta);//calculate the x component
+        float y = sinf(theta);//calculate the y component
 
         circlex[ii] = x;
         circley[ii] = y;
 
     }
 
+   // init
+    for(int ii = 0; ii < num_segments; ii++)
+    {
+        circlex[ii] *= 7;
+        circley[ii] *= 12;
+    }
    
    for(int y = 0; y < HEIGHT; ++y)
    for(int x = 0; x < WIDTH; ++x)
