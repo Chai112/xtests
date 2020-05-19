@@ -4,25 +4,26 @@
 
 CC=gcc # use GCC as a compiler
 
-SRC := $(wildcard *.cpp)    # all C++ files
-HEADERS := $(wildcard *.hpp) # all header files
 
 # Directories
 BDIR = bin# dir for binaries
 ODIR := obj# dir for C++ objects
+SDIR := src
 IDIR = include/sdk/cheaders# dir for headers
 LDIR = include/sdk/libraries/win# dir for libs
 
+SRC := $(wildcard $(SDIR)/*.cpp)    # all C++ files
+
 # Objects
 _OBJ := $(SRC:.cpp=.o) # all C++, except suffix is .o
-OBJ = $(patsubst %,$(ODIR)/%,$(_OBJ)) # append ODIR
+OBJ = $(patsubst $(SDIR)/%,$(ODIR)/%,$(_OBJ)) # append ODIR
 
 # Dependencies
 _DEPS = xplm widgets
 DEPS = $(addprefix -I$(IDIR)/,$(_DEPS)) # append -I and IDIR
 
 # Libraries
-_LIBS = XPLM_64 XPWidgets_64 opengl32
+_LIBS = XPLM_64 XPWidgets_64 opengl32 
 LIBS = $(addprefix -l, $(_LIBS)) # append -l
 
 # Definitions
@@ -34,12 +35,11 @@ CXXFLAGS = -m64 $(DEFS) $(DEPS)
 LDFLAGS = -shared -L$(LDIR) $(LIBS) 
 
 %.cpp:
-	echo $(OBJ) 
+	echo $@
 
-$(ODIR)/%.o: %.cpp
+$(ODIR)/%.o: $(SDIR)/%.cpp $(SDIR)/%.hpp
 	$(CC) -c -o $@ $< $(CXXFLAGS)
 
 $(BDIR)/win.xpl: $(OBJ)
 	$(CC) -o $@ $^ $(LDFLAGS) 
-	
-
+	$(MAKE) clean
