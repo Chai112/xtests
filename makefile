@@ -8,8 +8,6 @@ CC=gcc # use GCC as a compiler
 BDIR = bin# dir for binaries
 ODIR := obj# dir for C++ objects
 SDIR := src#dur for source
-IDIR = include/sdk/cheaders# dir for headers
-LDIR = include/sdk/libraries/win# dir for libs
 
 SRC := $(wildcard $(SDIR)/*.cpp)    # all C++ files
 
@@ -18,11 +16,15 @@ _OBJ := $(SRC:.cpp=.o) # all C++, except suffix is .o
 OBJ = $(patsubst $(SDIR)/%,$(ODIR)/%,$(_OBJ)) # append ODIR
 
 # Dependencies
-_DEPS = xplm widgets
-DEPS = $(addprefix -I$(IDIR)/,$(_DEPS)) # append -I and IDIR
+_DEPS = include/sdk/cheaders/xplm include/sdk/cheaders/widgets include/glew/cheaders
+DEPS = $(addprefix -I,$(_DEPS)) # append -I
+
+# Library Directories
+_LDIRS = include/sdk/libraries/win include/glew/libraries
+LDIRS = $(addprefix -L,$(_LDIRS)) # append -L
 
 # Libraries
-_LIBS = XPLM_64 XPWidgets_64 opengl32
+_LIBS = XPLM_64 XPWidgets_64 glew32 opengl32
 LIBS = $(addprefix -l, $(_LIBS)) # append -l
 
 # Definitions
@@ -31,13 +33,15 @@ DEFS = $(addprefix -D, $(_DEFS)) # append -D
 
 # Flags
 CXXFLAGS = -I$(SDIR) -m64 $(DEFS) $(DEPS) 
-LDFLAGS = -shared -L$(LDIR) $(LIBS) 
+LDFLAGS = -shared $(LDIRS) $(LIBS) 
 
-%.cpp:
-	echo $@
+#%.cpp:
+#	echo $@
 
 $(ODIR)/%.o: $(SDIR)/%.cpp $(SDIR)/%.hpp
+	@echo Compiling $<
 	$(CC) -c -o $@ $< $(CXXFLAGS)
 
 $(BDIR)/win.xpl: $(OBJ)
+	@echo Linking $@
 	$(CC) -o $@ $^ $(LDFLAGS) 

@@ -7,7 +7,8 @@
 #include "graphics.hpp"
 #include "letters.h"
 
-#include <GL/gl.h>
+#include <glew.h>
+//#include <GL/gl.h>
 #include <math.h>
 // Our texture dimensions.  Textures MUST be powers of 2 in OpenGL - if you don't need that much space,
 // just round up to the nearest power of 2.
@@ -82,6 +83,16 @@ PLUGIN_API int XPluginStart(char * name, char * sig, char * desc)
    strcpy(name,"Texture example");
    strcpy(sig,"xpsdk.test.texture_example");
    strcpy(desc,"Shows how to use textures.");
+   
+   GLenum err = glewInit();
+   if (GLEW_OK != err)
+   {
+       printf("GLEW NOT WORKING!!!\n");
+       return 2; // errored
+   }
+   GLuint VertexArrayID;
+   glGenVertexArrays(1, &VertexArrayID);
+   glBindVertexArray(VertexArrayID);
 
    // Initialization: allocate a textiure number.
    XPLMGenerateTextureNumbers(&g_tex_num, 1);

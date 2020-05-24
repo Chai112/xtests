@@ -1,4 +1,4 @@
-const unsigned short LETTER_O [] =
+static const unsigned short LETTER_O [] =
 {
     300, 450,
     295, 481,
@@ -26,4 +26,4 @@ const unsigned short LETTER_O [] =
     300, 100,
     300, 450,
 };
-const unsigned char LETTER_O_SZ = 50;
+static const unsigned char LETTER_O_SZ = 50;
