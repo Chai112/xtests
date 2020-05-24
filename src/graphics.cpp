@@ -1,12 +1,13 @@
-
 #include <stdio.h>
 #include <string.h>
 
 #include <XPLMGraphics.h>
 #include <XPLMDisplay.h>
 
-#include <GL/gl.h>
+#include "graphics.hpp"
+#include "letters.h"
 
+#include <GL/gl.h>
 #include <math.h>
 // Our texture dimensions.  Textures MUST be powers of 2 in OpenGL - if you don't need that much space,
 // just round up to the nearest power of 2.
@@ -56,16 +57,24 @@ static int my_draw_tex(
    glColor3f(1,1,1);        // Set color to white.
    
    int num_segments = 20;
-   for (int i = 0; i < 1000; i++)
+   glLineWidth(5);
+   glEnable(GL_LINE_SMOOTH); // TODO: this is a hardware dependency which could change for each driver!!!
+   for (int i = 0; i < 1; i++)
    {
-   glBegin(GL_LINE_LOOP);
-    for(int ii = 0; ii < num_segments; ii++)
+   glBegin(GL_LINE_STRIP);
+    for(int ii = 1; ii < LETTER_O_SZ - 1;)
     {
-        glVertex2f(1000 + circlex[ii], 1000 + circley[ii] );//output vertex
+        glVertex2f(500 + (float)LETTER_O[ii-1]/20, 500 + (float)LETTER_O[ii+=2]/20 );//output vertex
 
     }
     glEnd();
    }
+   glBegin(GL_TRIANGLE_FAN);
+    for(int ii = 0; ii < 8; ii++)
+        glVertex2f(400 + (float)circlex[ii]*20, 400 + (float)circley[ii]*20);//output vertex
+   glEnd();
+   glDisable(GL_LINE_SMOOTH);
+   glLineWidth(0);
 }
 
 PLUGIN_API int XPluginStart(char * name, char * sig, char * desc)
@@ -97,7 +106,7 @@ PLUGIN_API int XPluginStart(char * name, char * sig, char * desc)
 
    int cx = 1000;
    int cy = 1000;
-   int num_segments = 20;
+   int num_segments = 8;
    int i = 0;
     for(int ii = 0; ii < num_segments; ii++)
     {
@@ -109,13 +118,6 @@ PLUGIN_API int XPluginStart(char * name, char * sig, char * desc)
         circlex[ii] = x;
         circley[ii] = y;
 
-    }
-
-   // init
-    for(int ii = 0; ii < num_segments; ii++)
-    {
-        circlex[ii] *= 7;
-        circley[ii] *= 12;
     }
    
    for(int y = 0; y < HEIGHT; ++y)
@@ -153,3 +155,4 @@ PLUGIN_API void XPluginDisable(void)
 PLUGIN_API void XPluginReceiveMessage(XPLMPluginID from, long msg, void * p)
 {
 }
+

@@ -15,4 +15,5 @@ Violá! - find the `win.xpl` DLL plugin in the bin(aries) folder.\
 \
 Alternatively, if `build.bat` fails or if you are not using Windows, try using a CLI, cd int\o the directory and compile by running `make.exe`, normally installed at `C:\Program Files (x86)\GnuWin32\bin\make.exe` or with Mac/Linux, can be installed with `brew install make` and `brew install gcc` and change dependencies in the `makefile`\
 \
-Please find the latest X-Plane SDK [here](https://developer.x-plane.com/sdk/plugin-sdk-downloads/) and replace the  SDK  folder in `include`. succesfully built the plugin.
+Please find the latest X-Plane SDK [here](https://developer.x-plane.com/sdk/plugin-sdk-downloads/) and replace everything in`include/SDK`.\
+Please find the latest GLEW [here](http://glew.sourceforge.net/install.html) and manually replace everything in `include/GLEW`.
